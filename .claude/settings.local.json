@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(git pull:*)",
+      "Bash(./gradlew jvmTest:*)",
+      "Bash(find:*)",
+      "Bash(./gradlew :lib:jvmTest:*)",
+      "Bash(python3:*)",
+      "Bash(git:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)",
+      "Bash(./gradlew :lib:allTests)"
+    ]
+  }
+}
