@@ -7,7 +7,7 @@ KonvertToPoj.convert("goo2-kong7 e7-hiau2 oh8 tai5-gi2", POJ_INPUT, KPL_UNICODE)
 // → "góo-kōng ē-hiáu o̍h tâi-gí"
 ```
 
-**[→ Try it online](https://pehoejikesi.github.io/KonvertToPOJ/)** — a static browser converter
+**[→ Try it online](https://kesi.poj.tw/KonvertToPOJ/)** — a static browser converter
 covering every feature of the library. Nothing is uploaded; the whole library runs locally as
 a compiled JavaScript module.
 
@@ -429,7 +429,7 @@ cd lib/build/site && python3 -m http.server 8000
 directory — exactly what `.github/workflows/pages.yml` publishes to GitHub Pages on every
 push to `main`.
 
-To turn the site on for a fork: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+On a fork, enable it under **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 ## License
 
