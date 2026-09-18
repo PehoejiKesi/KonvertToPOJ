@@ -29,6 +29,9 @@ kotlin {
     js {
         browser()
         nodejs()
+        useEsModules()
+        binaries.library()
+        generateTypeScriptDefinitions()
     }
 
     @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
@@ -44,5 +47,29 @@ kotlin {
                 implementation(kotlin("test"))
             }
         }
+    }
+}
+
+// --- Static GitHub Pages converter site -------------------------------------
+// Bundles web/ together with the Kotlin/JS ES-module build into build/site,
+// a fully static directory (no server code) ready for GitHub Pages.
+
+val assembleWebSite by tasks.registering(Sync::class) {
+    group = "distribution"
+    description = "Assembles the static converter site into lib/build/site"
+
+    dependsOn(tasks.named("jsBrowserProductionLibraryDistribution"))
+
+    into(layout.buildDirectory.dir("site"))
+
+    from(rootProject.layout.projectDirectory.dir("web"))
+    from(layout.buildDirectory.dir("dist/js/productionLibrary")) {
+        into("lib")
+        include("*.mjs")
+    }
+
+    doLast {
+        // Tell GitHub Pages to serve the files as-is instead of running Jekyll.
+        layout.buildDirectory.file("site/.nojekyll").get().asFile.writeText("")
     }
 }

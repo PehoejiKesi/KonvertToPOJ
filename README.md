@@ -7,6 +7,10 @@ KonvertToPoj.convert("goo2-kong7 e7-hiau2 oh8 tai5-gi2", POJ_INPUT, KPL_UNICODE)
 // → "góo-kōng ē-hiáu o̍h tâi-gí"
 ```
 
+**[→ Try it online](https://pehoejikesi.github.io/KonvertToPOJ/)** — a static browser converter
+covering every feature of the library. Nothing is uploaded; the whole library runs locally as
+a compiled JavaScript module.
+
 ## Platform Support
 
 | Platform | Target |
@@ -409,6 +413,23 @@ Requires JDK 17+. iOS targets require macOS with Xcode.
 ```bash
 ./gradlew build
 ```
+
+### Web converter
+
+`web/` holds the static online converter — plain HTML, CSS and one ES module, with no
+framework and no build step of its own. It imports the Kotlin/JS build directly:
+
+```bash
+./gradlew :lib:assembleWebSite     # → lib/build/site/
+cd lib/build/site && python3 -m http.server 8000
+```
+
+`assembleWebSite` copies `web/` together with the Kotlin/JS ES-module output
+(`jsBrowserProductionLibraryDistribution`) into `lib/build/site/`, which is a purely static
+directory — exactly what `.github/workflows/pages.yml` publishes to GitHub Pages on every
+push to `main`.
+
+To turn the site on for a fork: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 ## License
 

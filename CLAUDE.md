@@ -8,6 +8,7 @@ Kotlin Multiplatform library converting between **POJ** (Pe̍h-ōe-jī) and **KP
 ./gradlew build                          # Build all targets
 ./gradlew :lib:jvmTest                   # Run JVM tests (unit + dictionary)
 ./gradlew :lib:allTests                  # Run all platform tests
+./gradlew :lib:assembleWebSite           # Build static Pages site -> lib/build/site
 ```
 
 Requires **JDK 17+**. iOS targets require macOS + Xcode.
@@ -58,6 +59,19 @@ lib/src/
 ├── appleMain/                   # iOS NFC normalization
 └── wasmJsMain/                  # Wasm NFC normalization
 ```
+
+```
+web/                             # Static online converter (GitHub Pages)
+├── index.html                   # UI shell: 4 mode tabs + options + panes
+├── styles.css                   # Theme tokens, light/dark, responsive
+└── app.js                       # ES module; imports ./lib/KonvertToPOJ-lib.mjs
+```
+
+The site is entirely static. `assembleWebSite` (defined in `lib/build.gradle.kts`) syncs
+`web/` plus the Kotlin/JS ES-module output into `lib/build/site/`; the JS target is
+configured with `useEsModules()` + `binaries.library()` so the browser imports the compiled
+library directly with no bundler. `.github/workflows/pages.yml` publishes it on push to
+`main`. Every method exported in `JsExport.kt` is reachable from the UI.
 
 ### Default POJ Input Normalization
 

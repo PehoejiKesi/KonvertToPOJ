@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="nan-Latn-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KonvertToPOJ — Tâi-gí Roman Orthography Converter</title>
+<meta name="description" content="Online converter for Taigi roman orthography: POJ (Pe̍h-ōe-jī) ↔ KPL (Kàu-io̍k Pō͘ Lô-má-jī), input numbers ↔ Unicode diacriticals, POJ normalization, Han-Lo spacing and syllable validation.">
+<meta property="og:title" content="KonvertToPOJ — Tâi-gí Roman Orthography Converter">
+<meta property="og:description" content="POJ ↔ KPL, tone numbers ↔ diacriticals, POJ normalization, Han-Lo spacing, syllable validation. Runs entirely in your browser.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='25' x='2' font-size='24' font-family='serif'%3E%C5%8D%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Charis+SIL:ital,wght@0,400;0,700;1,400&family=Noto+Serif+TC:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <div class="brand">
+      <h1>KonvertToPOJ</h1>
+      <p class="tagline">Tâi-gí Roman Orthography Converter — 台語羅馬字轉換器</p>
+    </div>
+    <div class="masthead-actions">
+      <button id="theme-toggle" class="icon-btn" type="button" title="Toggle light / dark" aria-label="Toggle light or dark theme">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path class="sun" d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.66-5.66 1.41-1.41M4.93 19.07l1.41-1.41m0-11.32L4.93 4.93m14.14 14.14-1.41-1.41M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/PehoejiKesi/KonvertToPOJ" target="_blank" rel="noopener" title="Source on GitHub" aria-label="Source on GitHub">
+        <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs wrap" role="tablist" aria-label="Converter modes">
+  <button class="tab is-active" role="tab" data-mode="convert" aria-selected="true">Convert</button>
+  <button class="tab" role="tab" data-mode="normalize" aria-selected="false">Normalize POJ</button>
+  <button class="tab" role="tab" data-mode="hanlo" aria-selected="false">Han-Lo 漢羅</button>
+  <button class="tab" role="tab" data-mode="validate" aria-selected="false">Validate</button>
+</nav>
+
+<main class="wrap">
+
+  <p class="mode-blurb" id="mode-blurb"></p>
+
+  <section class="controls" id="controls">
+
+    <div class="ctl-row" data-for="convert">
+      <label class="field">
+        <span class="field-label">From</span>
+        <select id="from-format" class="select"></select>
+      </label>
+      <button id="swap" class="swap-btn" type="button" title="Swap formats" aria-label="Swap from and to formats">⇄</button>
+      <label class="field">
+        <span class="field-label">To</span>
+        <select id="to-format" class="select"></select>
+      </label>
+    </div>
+
+    <div class="ctl-row" data-for="validate">
+      <label class="field">
+        <span class="field-label">Validate as</span>
+        <select id="validate-format" class="select"></select>
+      </label>
+    </div>
+
+    <div class="ctl-row" data-for="convert normalize hanlo">
+      <span class="field-label">Text mode</span>
+      <div class="segmented" id="seg-hybrid" role="radiogroup" aria-label="Text mode">
+        <button type="button" role="radio" data-value="pure" aria-checked="true" class="is-active">Pure lô-má-jī</button>
+        <button type="button" role="radio" data-value="hybrid" aria-checked="false">Hybrid 漢羅</button>
+      </div>
+      <p class="hint" id="hybrid-hint"></p>
+    </div>
+
+    <div class="ctl-row" data-for="hanlo">
+      <span class="field-label">Punctuation</span>
+      <div class="segmented" id="seg-punct" role="radiogroup" aria-label="Punctuation mode">
+        <button type="button" role="radio" data-value="fullwidth" aria-checked="true" class="is-active">Force full-width 全形</button>
+        <button type="button" role="radio" data-value="auto" aria-checked="false">Auto per sentence</button>
+      </div>
+      <p class="hint" id="punct-hint"></p>
+    </div>
+
+    <div class="ctl-row opts">
+      <span class="field-label">Options</span>
+      <label class="check"><input type="checkbox" id="opt-traditional"><span>Traditional nasal<em>ⁿh as hⁿ, oⁿ as o͘ⁿ</em></span></label>
+      <label class="check"><input type="checkbox" id="opt-haikau"><span>海口腔 vowels<em>POJ ur / or, KPL ir / er</em></span></label>
+      <label class="check" id="opt-ws-wrap"><input type="checkbox" id="opt-aggressive" checked><span>Aggressive whitespace<em>rebuild canonical spacing</em></span></label>
+    </div>
+
+  </section>
+
+  <section class="panes">
+    <div class="pane">
+      <div class="pane-head">
+        <h2>Input</h2>
+        <div class="pane-tools">
+          <span class="counter" id="in-count">0 chars</span>
+          <button class="text-btn" id="clear" type="button">Clear</button>
+        </div>
+      </div>
+      <textarea id="input" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="Phah-jī tī chia… / Type here…"></textarea>
+    </div>
+
+    <div class="pane">
+      <div class="pane-head">
+        <h2>Output</h2>
+        <div class="pane-tools">
+          <span class="counter" id="out-count">0 chars</span>
+          <button class="text-btn" id="reuse" type="button" title="Move the output back into the input box">↺ Reuse</button>
+          <button class="text-btn primary" id="copy" type="button">Copy</button>
+        </div>
+      </div>
+      <output id="output" class="output" aria-live="polite"></output>
+      <div id="validate-report" class="validate-report" hidden></div>
+    </div>
+  </section>
+
+  <section class="examples">
+    <span class="field-label">Examples</span>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="api-callout">
+    <div class="api-head">
+      <span class="field-label">Equivalent library call</span>
+      <button class="text-btn" id="copy-api" type="button">Copy</button>
+    </div>
+    <pre id="api-snippet" class="code"></pre>
+  </section>
+
+  <section class="reference">
+    <h2>Reference</h2>
+    <div class="ref-grid">
+      <div class="ref-card">
+        <h3>The four formats</h3>
+        <table class="ref-table">
+          <tr><th>POJ_INPUT</th><td>chit8-e5</td><td>POJ, tone numbers</td></tr>
+          <tr><th>POJ_UNICODE</th><td>chi̍t-ê</td><td>POJ, diacriticals</td></tr>
+          <tr><th>KPL_INPUT</th><td>tsit8-e5</td><td>KPL, tone numbers</td></tr>
+          <tr><th>KPL_UNICODE</th><td>tsi̍t-ê</td><td>KPL, diacriticals</td></tr>
+        </table>
+      </div>
+      <div class="ref-card">
+        <h3>POJ ↔ KPL differences</h3>
+        <table class="ref-table">
+          <tr><th>ch / chh</th><td>ts / tsh</td><td>initials</td></tr>
+          <tr><th>oa / oe</th><td>ua / ue</td><td>vowels</td></tr>
+          <tr><th>ek / eng</th><td>ik / ing</td><td>finals</td></tr>
+          <tr><th>o͘</th><td>oo</td><td>/ɔ/</td></tr>
+          <tr><th>ⁿ</th><td>nn</td><td>nasal</td></tr>
+          <tr><th>ur / or</th><td>ir / er</td><td>海口腔</td></tr>
+        </table>
+      </div>
+      <div class="ref-card">
+        <h3>Tones</h3>
+        <p>Tones <strong>1 2 3 4 5 7 8 9</strong>. Tone 6 does not exist in standard Tâi-gí. Tones <strong>4</strong> and <strong>8</strong> are checked (束聲) — the syllable must end in <em>p, t, k</em> or <em>h</em>.</p>
+        <p>Typing <code>ou</code> in POJ input is read as <code>oo</code> (o͘) automatically.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>Everything runs in your browser — no text is ever uploaded. Powered by the
+      <a href="https://github.com/PehoejiKesi/KonvertToPOJ" target="_blank" rel="noopener">KonvertToPOJ</a>
+      Kotlin Multiplatform library, compiled to JavaScript.</p>
+    <p>Linguistic rules follow <em lang="nan-Latn-TW">狗公會曉學台語</em> by Ngô͘ Hê-bí — sections 21, 44, 45.</p>
+  </div>
+</footer>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="app.js"></script>
+<noscript><p class="wrap">This converter needs JavaScript — the whole library runs locally in your browser.</p></noscript>
+</body>
+</html>
