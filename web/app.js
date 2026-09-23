@@ -57,8 +57,8 @@ const EXAMPLES = {
 
 const state = {
   mode: 'convert',
-  from: 'POJ_INPUT',
-  to: 'KPL_UNICODE',
+  from: 'KPL_UNICODE',
+  to: 'POJ_UNICODE',
   validateFormat: 'POJ_UNICODE',
   hybrid: false,
   punct: 'fullwidth',
@@ -423,6 +423,39 @@ function toast(msg) {
 function safeGet(key) { try { return localStorage.getItem(key); } catch { return null; } }
 function safeSet(key, val) { try { localStorage.setItem(key, val); } catch { /* ignore */ } }
 
+/* ---------------- remembered settings ---------------- */
+
+// Everything in `state` except the text itself: the input pane is only ever
+// seeded from the URL hash, never from a previous visit.
+const PREFS_KEY = 'konverttopoj:prefs';
+const PREF_KEYS = ['mode', 'from', 'to', 'validateFormat', 'hybrid', 'punct',
+                   'traditionalNasal', 'haikau', 'aggressiveWhitespace'];
+
+function loadPrefs() {
+  const raw = safeGet(PREFS_KEY);
+  if (!raw) return;
+  let saved;
+  try { saved = JSON.parse(raw); } catch { return; }
+  if (!saved || typeof saved !== 'object') return;
+  const ids = FORMATS.map((f) => f.id);
+  const bool = (k) => { if (typeof saved[k] === 'boolean') state[k] = saved[k]; };
+  if (BLURBS[saved.mode]) state.mode = saved.mode;
+  if (ids.includes(saved.from)) state.from = saved.from;
+  if (ids.includes(saved.to)) state.to = saved.to;
+  if (ids.includes(saved.validateFormat)) state.validateFormat = saved.validateFormat;
+  if (saved.punct === 'auto' || saved.punct === 'fullwidth') state.punct = saved.punct;
+  bool('hybrid');
+  bool('traditionalNasal');
+  bool('haikau');
+  bool('aggressiveWhitespace');
+}
+
+function savePrefs() {
+  const out = {};
+  for (const k of PREF_KEYS) out[k] = state[k];
+  safeSet(PREFS_KEY, JSON.stringify(out));
+}
+
 /* ---------------- shareable URL ---------------- */
 
 let hashTimer;
@@ -440,6 +473,7 @@ function syncHash() {
     if (!state.aggressiveWhitespace) p.set('aw', '0');
     if (state.text) p.set('q', state.text);
     history.replaceState(null, '', '#' + p.toString());
+    savePrefs();
   }, 250);
 }
 
@@ -454,7 +488,7 @@ function readHash() {
   if (ids.includes(p.get('t'))) state.to = p.get('t');
   if (ids.includes(p.get('v'))) state.validateFormat = p.get('v');
   state.hybrid = p.get('h') === '1';
-  if (p.get('p') === 'auto') state.punct = 'auto';
+  state.punct = p.get('p') === 'auto' ? 'auto' : 'fullwidth';
   state.traditionalNasal = p.get('tn') === '1';
   state.haikau = p.get('hk') === '1';
   state.aggressiveWhitespace = p.get('aw') !== '0';
@@ -463,6 +497,7 @@ function readHash() {
 
 /* ---------------- boot ---------------- */
 
+loadPrefs();
 readHash();
 
 el.from.value = state.from;
@@ -476,7 +511,16 @@ setSegment(el.segPunct, state.punct);
 el.hybridHint.textContent = HYBRID_HINTS[state.hybrid ? 'hybrid' : 'pure'];
 el.punctHint.textContent = PUNCT_HINTS[state.punct];
 
-if (!state.text) state.text = 'goo2-kong7 e7-hiau2 oh8 tai5-gi2';
+if (!state.text) state.text = seedText();
 el.input.value = state.text;
+
+// The demo line is written in POJ input form and converted into whichever
+// format the session opens in, so the seeded text always matches the "From".
+function seedText() {
+  const seed = 'goo2-kong7 e7-hiau2 oh8 tai5-gi2';
+  const fmt = state.mode === 'validate' ? state.validateFormat : state.from;
+  if (fmt === 'POJ_INPUT') return seed;
+  try { return K.convert(seed, 'POJ_INPUT', fmt); } catch { return seed; }
+}
 
 setMode(state.mode);
