@@ -14,14 +14,13 @@ import tw.poj.kesi.konverttopoj.LomajiFormat
 internal object SyllableValidator {
 
     // --- POJ valid initials (longest first for greedy matching) ---
-    // Note: "z", "chn", "hn" are used in some historical/dialectal texts (e.g., 台日大辭典)
     private val POJ_INITIALS = listOf(
-        "chh", "chn", "ch", "ph", "th", "kh", "hn", "ng", "p", "m", "b", "t", "n", "l", "k", "g", "h", "s", "j", "z"
+        "chh", "ch", "ph", "th", "kh", "ng", "p", "m", "b", "t", "n", "l", "k", "g", "h", "s", "j"
     )
 
     // --- KPL valid initials ---
     private val KPL_INITIALS = listOf(
-        "tsh", "tsn", "ts", "ph", "th", "kh", "hn", "ng", "p", "m", "b", "t", "n", "l", "k", "g", "h", "s", "j", "z"
+        "tsh", "ts", "ph", "th", "kh", "ng", "p", "m", "b", "t", "n", "l", "k", "g", "h", "s", "j"
     )
 
     // --- Valid POJ rhymes (base, without Haikhau dialect) ---
@@ -179,6 +178,9 @@ internal object SyllableValidator {
         "uoi"
     )
 
+    // Nasal initials already nasalize the vowel, so their rhymes never carry the nn (ⁿ) marker
+    private val NASAL_INITIALS = setOf("m", "n", "ng")
+
     // Checked finals end in p, t, k, h
     private val CHECKED_ENDINGS = setOf('p', 't', 'k', 'h')
 
@@ -254,11 +256,13 @@ internal object SyllableValidator {
 
         // Strip initial consonant (longest match first)
         var rhyme = base
-        for (initial in initials) {
-            if (base.startsWith(initial)) {
-                val candidate = base.removePrefix(initial)
+        var initial = ""
+        for (candidateInitial in initials) {
+            if (base.startsWith(candidateInitial)) {
+                val candidate = base.removePrefix(candidateInitial)
                 if (candidate.isNotEmpty() && candidate in rhymes) {
                     rhyme = candidate
+                    initial = candidateInitial
                     break
                 }
             }
@@ -266,6 +270,9 @@ internal object SyllableValidator {
 
         // If rhyme is still == base (no initial stripped) or not in whitelist, invalid
         if (rhyme !in rhymes) return false
+
+        // m / n / ng + nasal-marked rhyme (e.g. "niunn") is never written
+        if (initial in NASAL_INITIALS && "nn" in rhyme) return false
 
         return !strictTones || validateToneConsistency(rhyme, toneChar)
     }

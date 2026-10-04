@@ -38,5 +38,24 @@ data class ConvertOptions(
      * Has no effect outside `normalizePojHanLoForceUsingFullwidthPunctuation`
      * and `normalizePojHanLoAutoChoanLoOrHanLoPunctuation`.
      */
-    val aggressiveWhitespace: Boolean = true
+    val aggressiveWhitespace: Boolean = true,
+
+    /**
+     * How `POJ_UNICODE ↔ KPL_UNICODE` conversion is carried out.
+     *
+     * - `false` (default, **direct**): the tone is read off the diacritic and
+     *   carried as a value, the bare letters are converted between systems, and
+     *   the tone mark is re-placed by the target system's rules. Digits in the
+     *   text are never read as tone numbers — a token containing a digit (e.g.
+     *   `goa2`, `COVID19`) passes through unchanged — and a syllable carrying two
+     *   conflicting tone marks is left as-is.
+     *   (Other directions from a Unicode format still go through input form, where a
+     *   trailing digit is a tone number, e.g. `goa2` POJ_UNICODE → KPL_INPUT gives `gua2`.)
+     * - `true` (**via input form**): the original pipeline — Unicode → input
+     *   (tone-number) form → system convert → Unicode. A trailing digit in a
+     *   Unicode token is treated as a tone number (`goa2` → `guá`).
+     *
+     * Has no effect on any other conversion direction.
+     */
+    val viaInputForm: Boolean = false
 )

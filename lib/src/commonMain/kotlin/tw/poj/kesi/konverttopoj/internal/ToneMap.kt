@@ -70,6 +70,9 @@ internal object PojToneMap {
         u2n["o\u0324\u0301"] = "or2"; u2n["o\u0324\u0300"] = "or3"
         u2n["o\u0324\u0302"] = "or5"; u2n["o\u0324\u0304"] = "or7"
         u2n[normalizeNfc("o\u0324\u030D\u030D")] = "or8"; u2n["o\u0324\u0306"] = "or9"
+        // Single U+030D (what a typed o̤̍ normalizes to) — after the double form so lookups try
+        // the longer key first; numberToUnicode keeps the first (double) form for output.
+        u2n[normalizeNfc("O\u0324\u030D")] = "Or8"; u2n[normalizeNfc("o\u0324\u030D")] = "or8"
 
         // M
         u2n["Ḿ"] = "M2"; u2n["M\u0300"] = "M3"; u2n["M\u0302"] = "M5"
@@ -97,7 +100,7 @@ internal object PojToneMap {
 
         val n2u = LinkedHashMap<String, String>()
         for ((key, value) in u2n) {
-            n2u[value] = key
+            if (value !in n2u) n2u[value] = key
         }
         numberToUnicode = n2u
     }

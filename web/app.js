@@ -65,6 +65,7 @@ const state = {
   traditionalNasal: false,
   haikau: false,
   aggressiveWhitespace: true,
+  viaInputForm: false,
   text: '',
 };
 
@@ -82,6 +83,8 @@ const el = {
   haikau: $('#opt-haikau'),
   aggressive: $('#opt-aggressive'),
   aggressiveWrap: $('#opt-ws-wrap'),
+  via: $('#opt-via'),
+  viaWrap: $('#opt-via-wrap'),
   input: $('#input'),
   output: $('#output'),
   report: $('#validate-report'),
@@ -121,6 +124,7 @@ $('#theme-toggle').addEventListener('click', () => {
 /* ---------------- conversion ---------------- */
 
 function run() {
+  syncViaVisibility();
   const text = state.text;
   if (!text) {
     el.output.textContent = '';
@@ -150,11 +154,12 @@ function run() {
 
 function compute(text) {
   const { traditionalNasal: tn, haikau: hk, aggressiveWhitespace: ws, hybrid } = state;
+  const via = state.viaInputForm && isUnicodeCrossing();
   switch (state.mode) {
     case 'convert':
       return hybrid
-        ? K.convertHybrid(text, state.from, state.to, tn, hk)
-        : K.convert(text, state.from, state.to, tn, hk);
+        ? K.convertHybrid(text, state.from, state.to, tn, hk, via)
+        : K.convert(text, state.from, state.to, tn, hk, via);
     case 'normalize':
       return hybrid ? K.normalizePojHybrid(text, tn, hk) : K.normalizePoj(text, tn, hk);
     case 'hanlo': {
@@ -232,6 +237,7 @@ function renderApi() {
   if (state.traditionalNasal) optParts.push('traditionalNasal = true');
   if (state.haikau) optParts.push('haikau = true');
   if (state.mode === 'hanlo' && !state.aggressiveWhitespace) optParts.push('aggressiveWhitespace = false');
+  if (isUnicodeCrossing() && state.viaInputForm) optParts.push('viaInputForm = true');
   const opts = optParts.length ? `, ConvertOptions(${optParts.join(', ')})` : '';
   const arg = 'text';
   let call;
@@ -340,6 +346,15 @@ el.validateFormat.addEventListener('change', () => { state.validateFormat = el.v
 el.traditional.addEventListener('change', () => { state.traditionalNasal = el.traditional.checked; run(); syncHash(); });
 el.haikau.addEventListener('change',      () => { state.haikau = el.haikau.checked; run(); syncHash(); });
 el.aggressive.addEventListener('change',  () => { state.aggressiveWhitespace = el.aggressive.checked; run(); syncHash(); });
+el.via.addEventListener('change',         () => { state.viaInputForm = el.via.checked; run(); syncHash(); });
+
+// The via-input-form option only matters for POJ Unicode ↔ KPL Unicode.
+function isUnicodeCrossing() {
+  if (state.mode !== 'convert') return false;
+  const pair = [state.from, state.to].sort().join(' ');
+  return pair === 'KPL_UNICODE POJ_UNICODE';
+}
+function syncViaVisibility() { el.viaWrap.hidden = !isUnicodeCrossing(); }
 
 $('#swap').addEventListener('click', () => {
   [state.from, state.to] = [state.to, state.from];
@@ -429,7 +444,7 @@ function safeSet(key, val) { try { localStorage.setItem(key, val); } catch { /* 
 // seeded from the URL hash, never from a previous visit.
 const PREFS_KEY = 'konverttopoj:prefs';
 const PREF_KEYS = ['mode', 'from', 'to', 'validateFormat', 'hybrid', 'punct',
-                   'traditionalNasal', 'haikau', 'aggressiveWhitespace'];
+                   'traditionalNasal', 'haikau', 'aggressiveWhitespace', 'viaInputForm'];
 
 function loadPrefs() {
   const raw = safeGet(PREFS_KEY);
@@ -448,6 +463,7 @@ function loadPrefs() {
   bool('traditionalNasal');
   bool('haikau');
   bool('aggressiveWhitespace');
+  bool('viaInputForm');
 }
 
 function savePrefs() {
@@ -471,6 +487,7 @@ function syncHash() {
     if (state.traditionalNasal) p.set('tn', '1');
     if (state.haikau) p.set('hk', '1');
     if (!state.aggressiveWhitespace) p.set('aw', '0');
+    if (state.viaInputForm) p.set('vi', '1');
     if (state.text) p.set('q', state.text);
     history.replaceState(null, '', '#' + p.toString());
     savePrefs();
@@ -492,6 +509,7 @@ function readHash() {
   state.traditionalNasal = p.get('tn') === '1';
   state.haikau = p.get('hk') === '1';
   state.aggressiveWhitespace = p.get('aw') !== '0';
+  state.viaInputForm = p.get('vi') === '1';
   state.text = p.get('q') || '';
 }
 
@@ -506,6 +524,7 @@ el.validateFormat.value = state.validateFormat;
 el.traditional.checked = state.traditionalNasal;
 el.haikau.checked = state.haikau;
 el.aggressive.checked = state.aggressiveWhitespace;
+el.via.checked = state.viaInputForm;
 setSegment(el.segHybrid, state.hybrid ? 'hybrid' : 'pure');
 setSegment(el.segPunct, state.punct);
 el.hybridHint.textContent = HYBRID_HINTS[state.hybrid ? 'hybrid' : 'pure'];

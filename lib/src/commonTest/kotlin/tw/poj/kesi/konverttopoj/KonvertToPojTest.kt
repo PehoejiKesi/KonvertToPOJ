@@ -1,6 +1,7 @@
 package tw.poj.kesi.konverttopoj
 
 import tw.poj.kesi.konverttopoj.LomajiFormat.*
+import tw.poj.kesi.konverttopoj.internal.normalizeNfc
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -212,6 +213,82 @@ class KonvertToPojTest {
     @Test fun kplUni2PojUni_tsit8() = assertConvert("tsi̍t", "chi̍t", KPL_UNICODE, POJ_UNICODE)
     @Test fun kplUni2PojUni_uan5() = assertConvert("uân", "oân", KPL_UNICODE, POJ_UNICODE)
     @Test fun kplUni2PojUni_oo7() = assertConvert("gōo", "gō͘", KPL_UNICODE, POJ_UNICODE)
+
+    // =========================================================================
+    // Cross-system Unicode ↔ Unicode: direct (default) vs. via input form
+    // =========================================================================
+
+    private val viaInput = ConvertOptions(viaInputForm = true)
+
+    // Tone mark is re-placed by the target system's rules
+    @Test fun direct_pojToKpl_toneMoves() = assertConvert("hōe", "huē", POJ_UNICODE, KPL_UNICODE)
+    @Test fun direct_kplToPoj_toneMoves() = assertConvert("huē", "hōe", KPL_UNICODE, POJ_UNICODE)
+    @Test fun direct_pojToKpl_nasal() = assertConvert("kòaⁿ", "kuànn", POJ_UNICODE, KPL_UNICODE)
+    @Test fun direct_kplToPoj_nasal() = assertConvert("kuànn", "kòaⁿ", KPL_UNICODE, POJ_UNICODE)
+    @Test fun direct_kplToPoj_checkedNasal() = assertConvert("hiu̍hnn", "hiu̍hⁿ", KPL_UNICODE, POJ_UNICODE)
+    @Test fun direct_kplToPoj_tone9() = assertConvert("a̋", "ă", KPL_UNICODE, POJ_UNICODE)
+    @Test fun direct_pojToKpl_upper() = assertConvert("CHI̍T", "TSI̍T", POJ_UNICODE, KPL_UNICODE)
+    @Test fun direct_pojToKpl_haikau() = assertConvert("ṳ̂", "îr", POJ_UNICODE, KPL_UNICODE)
+    @Test fun direct_kplToPoj_phrase() = assertConvert("Tsi̍t-ê tsa-bóo", "Chi̍t-ê cha-bó͘", KPL_UNICODE, POJ_UNICODE)
+
+    // A misplaced tone mark is still read and placed canonically
+    @Test fun direct_pojToKpl_misplacedTone() = assertConvert("hoē", "huē", POJ_UNICODE, KPL_UNICODE)
+
+    // Digits are never tone numbers in direct mode; via input form they are
+    @Test fun direct_pojToKpl_digitTokenUntouched() = assertConvert("goa2", "goa2", POJ_UNICODE, KPL_UNICODE)
+    @Test fun direct_kplToPoj_digitTokenUntouched() = assertConvert("COVID19", "COVID19", KPL_UNICODE, POJ_UNICODE)
+    @Test fun viaInput_pojToKpl_digitIsTone() = assertConvert("goa2", "guá", POJ_UNICODE, KPL_UNICODE, viaInput)
+
+    // Review regressions: digits stay tones on every route through input form
+    @Test fun unicodeToInput_digitIsTone() = assertConvert("goa2", "gua2", POJ_UNICODE, KPL_INPUT)
+    @Test fun normalizePoj_kplWithToneDigit() = assertEquals("chóa chi̍t", KonvertToPoj.normalizePoj("tsua2 tsi̍t"))
+    @Test fun normalizePoj_coastalSingleTone8Mark() =
+        assertEquals(normalizeNfc("o\u0324\u030D\u030Dh"), KonvertToPoj.normalizePoj(normalizeNfc("o\u0324\u030Dh")))
+    @Test fun kplToPoj_allCapsCoastalKeepsTone() = assertConvert("ÎR ÊR", normalizeNfc("\u1E72\u0302 O\u0324\u0302"), KPL_UNICODE, POJ_UNICODE)
+    @Test fun pojIn_allCapsOoKeepsTone() = assertConvert("OO5", "Ô\u0358", POJ_INPUT, POJ_UNICODE)
+
+    // Two different tone marks on one syllable → left as-is
+    @Test fun direct_conflictingTones_untouched() = assertConvert("chíà", "chíà", POJ_UNICODE, KPL_UNICODE)
+
+    // Syllable-shape check: only well-formed syllables of the source system are converted
+    @Test fun shape_englishWordUntouched_pojToKpl() =
+        assertConvert("connecting Tennessee chi̍t", "connecting Tennessee tsi̍t", POJ_UNICODE, KPL_UNICODE)
+    @Test fun shape_englishWordUntouched_kplToPoj() =
+        assertConvert("streaming tsi̍t", "streaming chi̍t", KPL_UNICODE, POJ_UNICODE)
+    @Test fun shape_englishWordUntouched_input() =
+        assertConvert("connecting chit8", "connecting chi̍t", POJ_INPUT, POJ_UNICODE)
+    @Test fun shape_kplInitialNotPoj() = assertConvert("tsi̍t", "tsi̍t", POJ_UNICODE, KPL_UNICODE)
+    @Test fun shape_pojInitialNotKpl() = assertConvert("chi̍t", "chi̍t", KPL_UNICODE, POJ_UNICODE)
+    @Test fun shape_tone8NeedsCheckedEnding() = assertConvert("a8", "a8", POJ_INPUT, POJ_UNICODE)
+    @Test fun shape_tone8Checked() = assertConvert("ah8", "a̍h", POJ_INPUT, POJ_UNICODE)
+    @Test fun shape_tone4NeedsCheckedEnding() = assertConvert("a4", "a4", POJ_INPUT, KPL_INPUT)
+    @Test fun shape_noTone6() = assertConvert("a6", "a6", POJ_INPUT, POJ_UNICODE)
+    @Test fun shape_syllabicNasal() = assertConvert("hng5 m7 ngh8", "hn̂g m̄ n̍gh", POJ_INPUT, POJ_UNICODE)
+    @Test fun shape_coastal() = assertConvert("ṳ̂ o̤h", "îr erh", POJ_UNICODE, KPL_UNICODE)
+    // Nucleus is any combination of 1–3 vowels, not a fixed list
+    @Test fun shape_tripleVowel_pojInput() = assertConvert("khiaih8 oaih8 iaunn5", "khia̍ih oa̍ih iâuⁿ", POJ_INPUT, POJ_UNICODE)
+    @Test fun shape_tripleVowel_pojToKpl() = assertConvert("khia̍ih oa̍ih iâuⁿ", "khia̍ih ua̍ih iâunn", POJ_UNICODE, KPL_UNICODE)
+    @Test fun shape_tripleVowel_kplToPoj() = assertConvert("khia̍ih ua̍ih iâunn", "khia̍ih oa̍ih iâuⁿ", KPL_UNICODE, POJ_UNICODE)
+    @Test fun shape_fourVowelsRejected() = assertConvert("kiaui5", "kiaui5", POJ_INPUT, POJ_UNICODE)
+    // Nasal onset (m, n, ng) already nasalizes the vowel — no ⁿ / nn after it
+    @Test fun shape_nasalOnsetNoMarker_poj() = assertConvert("niûⁿ mâⁿ ngāiⁿ", "niûⁿ mâⁿ ngāiⁿ", POJ_UNICODE, KPL_UNICODE)
+    @Test fun shape_nasalOnsetNoMarker_kpl() = assertConvert("niûnn mânn", "niûnn mânn", KPL_UNICODE, POJ_UNICODE)
+    @Test fun shape_nasalOnsetNoMarker_input() = assertConvert("niunn5", "niunn5", POJ_INPUT, POJ_UNICODE)
+    @Test fun shape_nasalOnsetPlain() = assertConvert("niû mâ ngāi", "niû mâ ngāi", POJ_UNICODE, KPL_UNICODE)
+    @Test fun shape_nasalOnsetSyllabicNg() = assertConvert("nn̄g mn̂g", "nn̄g mn̂g", KPL_UNICODE, POJ_UNICODE)
+    @Test fun shape_nasalMarkerOtherOnset() = assertConvert("siⁿ kiaⁿ", "sinn kiann", POJ_UNICODE, KPL_UNICODE)
+    @Test fun shape_nasalAfterCheckedCoda() = assertConvert("hiu̍hⁿ", "hiu̍hnn", POJ_UNICODE, KPL_UNICODE)
+
+    @Test fun direct_traditionalNasal() =
+        assertConvert("oⁿh", "oohnn", POJ_UNICODE, KPL_UNICODE, ConvertOptions(traditionalNasal = true))
+
+    @Test fun directMatchesViaInput_onValidText() {
+        val poj = "Góa sī Tâi-oân-lâng, ē-hiáu kóng Tâi-gí; chi̍t-ē-á bô koan-hē, hiu̍hⁿ, sió-khóa"
+        val kpl = KonvertToPoj.convert(poj, POJ_UNICODE, KPL_UNICODE)
+        assertEquals(KonvertToPoj.convert(poj, POJ_UNICODE, KPL_UNICODE, viaInput), kpl)
+        assertEquals(KonvertToPoj.convert(kpl, KPL_UNICODE, POJ_UNICODE, viaInput), KonvertToPoj.convert(kpl, KPL_UNICODE, POJ_UNICODE))
+        assertEquals(poj, KonvertToPoj.convert(kpl, KPL_UNICODE, POJ_UNICODE))
+    }
 
     // =========================================================================
     // Cross-system: POJ Unicode ↔ KPL Input

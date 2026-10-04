@@ -84,6 +84,15 @@ KonvertToPoj.convert("goo2-kong7 e7-hiau2 oh8 tai5-gi2", POJ_INPUT, KPL_UNICODE)
 
 All 12 conversion directions (4 formats × 3 other formats) are supported.
 
+Only tokens shaped like a syllable of the source format are converted —
+`[onset] + vowels + [nasal ⁿ/nn] + [coda ng m n p t k h] + [tone]`, with each system's own
+onsets (`ch chh` vs `ts tsh`) and vowels (`o͘ ṳ o̤` vs `oo ir er`). Anything else passes through
+unchanged, so English words are left alone:
+
+```kotlin
+KonvertToPoj.convert("connecting chi̍t", POJ_UNICODE, KPL_UNICODE)  // → "connecting tsi̍t"
+```
+
 ### Options
 
 `ConvertOptions` controls optional behaviors for conversion and validation:
@@ -94,7 +103,8 @@ import tw.poj.kesi.konverttopoj.ConvertOptions
 val opts = ConvertOptions(
     traditionalNasal = true,        // Accept traditional POJ nasal conventions
     haikau = true,                  // Include 海口腔 coastal dialect vowels
-    aggressiveWhitespace = true     // Han-Lo whitespace mode (only affects normalizePojHanLo*)
+    aggressiveWhitespace = true,    // Han-Lo whitespace mode (only affects normalizePojHanLo*)
+    viaInputForm = false            // POJ Unicode ↔ KPL Unicode: direct (default) or via input form
 )
 
 KonvertToPoj.convert("annh8", POJ_INPUT, POJ_UNICODE, opts)  // → "a̍hⁿ"
@@ -147,6 +157,29 @@ KonvertToPoj.normalizePojHanLoForceUsingFullwidthPunctuation(
 ```
 
 Has no effect on other methods.
+
+#### `viaInputForm`
+
+Selects how `POJ_UNICODE ↔ KPL_UNICODE` is converted. Defaults to `false`.
+
+- **`false` (direct)** — the tone is read off the diacritic and carried as a value,
+  the bare letters are converted between systems, and the tone mark is re-placed by
+  the target system's rules. Digits are never read as tone numbers: a token
+  containing a digit passes through unchanged, and a syllable with two conflicting
+  tone marks is left as-is.
+- **`true` (via input form)** — the original pipeline: Unicode → tone-number input
+  form → system convert → Unicode. A trailing digit in a Unicode token is treated
+  as a tone number.
+
+```kotlin
+KonvertToPoj.convert("hōe goa2", POJ_UNICODE, KPL_UNICODE)
+// → "huē goa2"
+
+KonvertToPoj.convert("hōe goa2", POJ_UNICODE, KPL_UNICODE, ConvertOptions(viaInputForm = true))
+// → "huē guá"
+```
+
+Has no effect on any other conversion direction.
 
 ### Hybrid text
 
@@ -328,8 +361,9 @@ const result = KonvertToPoj.convert("tai5-gi2", "POJ_INPUT", "POJ_UNICODE");
 const valid = KonvertToPoj.isValidSyllable("tai5", "POJ_INPUT");
 // → true
 
-// With options (traditionalNasal, haikau):
+// With options (traditionalNasal, haikau[, viaInputForm]):
 const trad = KonvertToPoj.convert("annh8", "POJ_INPUT", "POJ_UNICODE", true, false);
+const via = KonvertToPoj.convert("goa2", "POJ_UNICODE", "KPL_UNICODE", false, false, true); // "guá"
 const coastal = KonvertToPoj.isValidSyllable("ur2", "POJ_INPUT", false, true);
 
 // Normalization:

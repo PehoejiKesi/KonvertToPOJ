@@ -382,6 +382,27 @@ class SyllableValidatorTest {
         assertFalse("xyz".isValidLomajiSyllable(POJ_INPUT))
     }
 
+    // =========================================================================
+    // Onsets chn / tsn / hn / z are not Taigi onsets
+    // =========================================================================
+
+    @Test fun onset_chn_invalid() = assertInvalid("chnia", POJ_INPUT)
+    @Test fun onset_tsn_invalid() = assertInvalid("tsnia", KPL_INPUT)
+    @Test fun onset_hn_invalid() = assertInvalid("hnia2", POJ_INPUT)
+    @Test fun onset_z_invalid() = assertInvalid("zu", KPL_INPUT)
+
+    // =========================================================================
+    // Nasal onset (m, n, ng) never takes the nasal marker
+    // =========================================================================
+
+    @Test fun nasalOnset_niunn_invalid() = assertInvalid("niunn5", POJ_INPUT)
+    @Test fun nasalOnset_niun_unicode_invalid() = assertInvalid("niûⁿ", POJ_UNICODE)
+    @Test fun nasalOnset_mann_kpl_invalid() = assertInvalid("mânn", KPL_UNICODE)
+    @Test fun nasalOnset_ngainn_invalid() = assertInvalid("ngainn7", KPL_INPUT)
+    @Test fun nasalOnset_niu_valid() = assertValid("niû", POJ_UNICODE)
+    @Test fun nasalOnset_nng_valid() = assertValid("nn̄g", KPL_UNICODE)
+    @Test fun nasalOnset_siⁿ_valid() = assertValid("siⁿ", POJ_UNICODE)
+
     @Test fun ext_isValidLomaji() {
         assertTrue("tai5-gi2".isValidLomaji(POJ_INPUT))
     }

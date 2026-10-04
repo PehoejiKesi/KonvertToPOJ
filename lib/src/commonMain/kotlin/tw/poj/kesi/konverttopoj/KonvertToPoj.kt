@@ -189,7 +189,9 @@ object KonvertToPoj {
                         SyllableValidator.isValid(token.text, kplFormat, strictTones = false, permissive = false, options = options) &&
                         !SyllableValidator.isValid(token.text, pojFormat, strictTones = false, permissive = false, options = options)
                     ) {
-                        convertSyllable(token.text, kplFormat, pojFormat, options)
+                        // Via input form: the rest of normalizePoj reads a trailing digit as a
+                        // tone, so the pre-pass must too (`tsua2` → `chóa`).
+                        convertSyllable(token.text, kplFormat, pojFormat, options.copy(viaInputForm = true))
                     } else {
                         token.text
                     }
@@ -214,6 +216,23 @@ object KonvertToPoj {
     }
 
     private fun convertSyllable(syllable: String, from: LomajiFormat, to: LomajiFormat, options: ConvertOptions = ConvertOptions()): String {
+        // Unicode ↔ Unicode across systems is converted directly unless the caller asked for
+        // the original route through input-number form.
+        val direct = !options.viaInputForm &&
+            ((from == LomajiFormat.POJ_UNICODE && to == LomajiFormat.KPL_UNICODE) ||
+                (from == LomajiFormat.KPL_UNICODE && to == LomajiFormat.POJ_UNICODE))
+
+        // Only convert tokens shaped like a syllable of the source format; leave the rest as-is.
+        // Through input form a trailing digit on a Unicode token is a tone number (`goa2`);
+        // the direct route never reads digits as tones.
+        val shapeChecked = if (from == LomajiFormat.POJ_INPUT) normalizePojInputOu(syllable) else syllable
+        if (!SyllableShape.matches(shapeChecked, from, allowToneDigit = !direct)) return syllable
+
+        if (direct) {
+            return if (from == LomajiFormat.POJ_UNICODE) DirectUnicodeConverter.pojToKpl(syllable, options)
+            else DirectUnicodeConverter.kplToPoj(syllable)
+        }
+
         // Pipeline: source format → input numbers → (normalize) → (system convert if needed) → target format
         val isAllUpper = syllable.isAllUpper() && syllable.count { it.isLetter() } > 1
         val isPojSource = from == LomajiFormat.POJ_INPUT || from == LomajiFormat.POJ_UNICODE

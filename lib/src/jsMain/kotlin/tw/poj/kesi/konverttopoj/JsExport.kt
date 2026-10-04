@@ -15,11 +15,11 @@ object KonvertToPojJs {
     val KPL_INPUT = "KPL_INPUT"
     val KPL_UNICODE = "KPL_UNICODE"
 
-    fun convert(text: String, from: String, to: String, traditionalNasal: Boolean = false, haikau: Boolean = false): String =
-        KonvertToPoj.convert(text, LomajiFormat.valueOf(from), LomajiFormat.valueOf(to), ConvertOptions(traditionalNasal, haikau))
+    fun convert(text: String, from: String, to: String, traditionalNasal: Boolean = false, haikau: Boolean = false, viaInputForm: Boolean = false): String =
+        KonvertToPoj.convert(text, LomajiFormat.valueOf(from), LomajiFormat.valueOf(to), ConvertOptions(traditionalNasal, haikau, viaInputForm = viaInputForm))
 
-    fun convertHybrid(text: String, from: String, to: String, traditionalNasal: Boolean = false, haikau: Boolean = false): String =
-        KonvertToPoj.convertHybrid(text, LomajiFormat.valueOf(from), LomajiFormat.valueOf(to), ConvertOptions(traditionalNasal, haikau))
+    fun convertHybrid(text: String, from: String, to: String, traditionalNasal: Boolean = false, haikau: Boolean = false, viaInputForm: Boolean = false): String =
+        KonvertToPoj.convertHybrid(text, LomajiFormat.valueOf(from), LomajiFormat.valueOf(to), ConvertOptions(traditionalNasal, haikau, viaInputForm = viaInputForm))
 
     fun isValidSyllable(syllable: String, format: String, traditionalNasal: Boolean = false, haikau: Boolean = false): Boolean =
         KonvertToPoj.isValidSyllable(syllable, LomajiFormat.valueOf(format), ConvertOptions(traditionalNasal, haikau))

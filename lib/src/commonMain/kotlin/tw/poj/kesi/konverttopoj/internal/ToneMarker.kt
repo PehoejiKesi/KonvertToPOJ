@@ -43,8 +43,10 @@ internal object ToneMarker {
         if (last == '1' || last == '4') return pojFixOo(base)
 
         val target = base.substring(pos.offset, pos.offset + pos.length)
-        val key = target + toneNumber
-        val replacement = PojToneMap.numberToUnicode[key] ?: return base
+        val replacement = PojToneMap.numberToUnicode[target + toneNumber]
+            // All-caps two-letter units ("UR", "OO", "OR") are keyed in title case
+            ?: PojToneMap.numberToUnicode[target.take(1) + target.drop(1).lowercase() + toneNumber]
+            ?: return base
 
         val result = base.substring(0, pos.offset) + replacement +
             base.substring(pos.offset + pos.length)
@@ -87,15 +89,17 @@ internal object ToneMarker {
         return pojFixJiboToInput(syllable, isAllUppercase)
     }
 
-    private fun pojFixJiboToInput(s: String, isAllUppercase: Boolean): String {
+    internal fun pojFixJiboToInput(s: String, isAllUppercase: Boolean): String {
         var result = s.replace("\u207F", "nn") // ⁿ → nn
         if (isAllUppercase) {
             result = result.replace(normalizeNfc("O\u0358"), "OO")
                 .replace("Ṳ", "UR").replace("Ur", "UR").replace("Oo", "OO")
         } else {
             result = result.replace(normalizeNfc("O\u0358"), "Oo")
+                .replace("\u1e72", "Ur")
         }
         return result.replace(normalizeNfc("o\u0358"), "oo")
+            .replace("O\u0324", if (isAllUppercase) "OR" else "Or")
             .replace("ṳ", "ur")
             .replace("o\u0324", "or")
     }
@@ -167,6 +171,46 @@ internal object ToneMarker {
             }
         }
         return syllable
+    }
+
+    // --- Tone extraction (system-agnostic) ---
+
+    /** Combining tone marks → tone number. Breve (POJ) and double acute (KPL) are both tone 9. */
+    private val TONE_MARK_NUMBERS: Map<Char, Int> = mapOf(
+        '\u0301' to 2, '\u0300' to 3, '\u0302' to 5,
+        '\u0304' to 7, '\u030D' to 8, '\u0306' to 9, '\u030B' to 9,
+    )
+
+    /** Precomposed toned letters (á, ǹ, ŏ, ű, …) → bare letter + tone number. */
+    private val PRECOMPOSED_TONED: Map<Char, Pair<Char, Int>> = buildMap {
+        for (map in listOf(PojToneMap.unicodeToNumber, KplToneMap.unicodeToNumber)) {
+            for ((unicode, number) in map) {
+                if (unicode.length == 1 && number.length == 2) {
+                    put(unicode[0], number[0] to number[1].digitToInt())
+                }
+            }
+        }
+    }
+
+    /**
+     * Remove the tone diacritic from a Unicode syllable of either system.
+     * Returns the bare syllable and its tone number (`null` when unmarked, i.e. tone 1 or 4),
+     * or `null` overall when the syllable carries two different tone marks.
+     */
+    fun stripToneMark(syllable: String): Pair<String, Int?>? {
+        var tone: Int? = null
+        val bare = StringBuilder(syllable.length)
+        for (c in syllable) {
+            val precomposed = PRECOMPOSED_TONED[c]
+            val t = when {
+                precomposed != null -> { bare.append(precomposed.first); precomposed.second }
+                c in TONE_MARK_NUMBERS -> TONE_MARK_NUMBERS.getValue(c)
+                else -> { bare.append(c); continue }
+            }
+            if (tone != null && tone != t) return null
+            tone = t
+        }
+        return normalizeNfc(bare.toString()) to tone
     }
 
     // --- POJ tone position finder ---

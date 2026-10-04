@@ -17,13 +17,33 @@ Requires **JDK 17+**. iOS targets require macOS + Xcode.
 
 ### Conversion Pipeline
 
-All 12 conversion directions follow a pipeline with optional normalization:
+All conversion directions except `POJ_UNICODE ↔ KPL_UNICODE` follow a pipeline with optional normalization:
 
 ```
 Source Format → Input-Number Form → [POJ Input "ou"→"oo" if from POJ_INPUT] → [Traditional Normalize if options.traditionalNasal] → [System Convert if crossing POJ↔KPL] → Target Format
 ```
 
-Example: `POJ_UNICODE "Tâi-gí"` → `POJ_INPUT "tai5-gi2"` → `KPL_INPUT "tai5-gi2"` → `KPL_UNICODE "Tâi-gí"`
+Example: `POJ_INPUT "tai5-gi2"` → `KPL_INPUT "tai5-gi2"` → `KPL_UNICODE "Tâi-gí"`
+
+**Unicode ↔ Unicode across systems is direct by default** (`internal/DirectUnicodeConverter.kt`):
+strip the tone diacritic into a value (`ToneMarker.stripToneMark`) → convert the bare letters
+(`SystemConverter`) → re-place the tone by the target system's rules. Digits are never read as
+tones (a token containing a digit passes through), and a syllable with two conflicting tone marks
+is left as-is. `ConvertOptions(viaInputForm = true)` restores the pipeline above for this pair.
+
+**Syllable-shape gate (all directions):** before any syllable is converted, `convertSyllable`
+checks it with `internal/SyllableShape.kt`; a token that fails passes through unchanged (so
+English words like `connecting` are never treated as POJ/KPL). Shape:
+`[onset] + any 1–3 vowels + [nasal] + [coda] + [tone]` (any vowel combination, e.g. `a`, `oa`, `iai`) or `[onset] + m/ng + [h] + [tone]`.
+- POJ onsets `ph p m b th t l kh k ng n g h chh ch s j`; vowels `a i u e o o͘ ṳ o̤` (also `ur or`); nasal `ⁿ`/`nn`
+- KPL onsets `ph p m b th t l kh k ng n g h tsh ts s j`; vowels `a i u e o oo ir er`; nasal `nn`
+- Coda `ng m n p t k h`; nasal may sit before or after a final `h`
+- After a nasal onset (`m n ng`) the nasal marker `ⁿ`/`nn` never appears (`niû`, not `niûⁿ`)
+- Tone: input formats take an optional trailing `2 3 5 7 8 9` (a typed `1`/`4` is tolerated and
+  dropped); Unicode formats take at most one tone diacritic and no digit (a trailing digit is
+  allowed only with `viaInputForm`). Tones 4/8 require a final `p t k h`.
+- Structural only — unlike `SyllableValidator` it does not whitelist rhymes. Both share the
+  onset lists (no `chn`/`tsn`, `hn`, `z`) and the nasal-onset rule.
 
 ### Four Formats (`LomajiFormat` enum)
 
@@ -41,11 +61,13 @@ lib/src/
 ├── commonMain/kotlin/tw/poj/kesi/konverttopoj/
 │   ├── KonvertToPoj.kt              # Public API: convert(), convertHybrid(), isValidSyllable(), isValidText()
 │   ├── LomajiFormat.kt          # Enum: POJ_INPUT, POJ_UNICODE, KPL_INPUT, KPL_UNICODE
-│   ├── ConvertOptions.kt        # Options: traditionalNasal, haikau, aggressiveWhitespace
+│   ├── ConvertOptions.kt        # Options: traditionalNasal, haikau, aggressiveWhitespace, viaInputForm
 │   └── internal/
 │       ├── ToneMap.kt           # Bidirectional maps: number↔unicode for each tone/vowel combo
 │       ├── ToneMarker.kt        # Tone placement/removal algorithms (POJ rules ≠ KPL rules)
 │       ├── SystemConverter.kt   # POJ↔KPL orthographic conversion (ch↔ts, oa↔ua, etc.)
+│       ├── DirectUnicodeConverter.kt # Direct POJ Unicode ↔ KPL Unicode (default for that pair)
+│       ├── SyllableShape.kt     # Structural onset/nucleus/coda/tone gate run before every conversion
 │       ├── Tokenizer.kt         # Split text into lomaji/non-lomaji tokens
 │       ├── SyllableValidator.kt # Whitelist-based syllable validation (haikau optional)
 │       ├── TraditionalNormalizer.kt # Normalize traditional POJ nasal conventions
@@ -136,6 +158,10 @@ All public API methods accept an optional `ConvertOptions` parameter:
   - POJ: `ur`, `or` and compounds | KPL: `ir`, `er` and compounds
   - Affects validation and `convertHybrid` (which uses validation to decide what to convert)
   - `convert()` handles these vowels regardless of this option
+
+- **`viaInputForm`** (default: `false`) — `POJ_UNICODE ↔ KPL_UNICODE` only:
+  - `false`: direct conversion (see Conversion Pipeline)
+  - `true`: original route through input-number form; a trailing digit in a Unicode token is a tone number (`goa2` → `guá`)
 
 - **`aggressiveWhitespace`** (default: `true`) — Whitespace handling in `normalizePojHanLo*` methods:
   - `true` (aggressive): strip all horizontal whitespace and rebuild canonical spacing
